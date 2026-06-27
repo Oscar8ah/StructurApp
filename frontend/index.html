@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StructurApp — Verificación NSR-10</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --border: #e4e4e0;
+    --border-strong: #c8c8c2;
+    --text: #1a1a18;
+    --text-2: #5c5c58;
+    --text-3: #9c9c96;
+    --accent: #1a56db;
+    --accent-bg: #eff4ff;
+    --green: #1a7a4a;
+    --green-bg: #f0faf4;
+    --green-border: #a7dfbf;
+    --red: #c0392b;
+    --red-bg: #fff5f5;
+    --red-border: #f5bcb6;
+    --amber: #92400e;
+    --amber-bg: #fffbeb;
+    --amber-border: #fcd34d;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--text);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 16px; font-weight: 700;
+  }
+  .logo-name { font-size: 15px; font-weight: 600; }
+  .logo-sub { font-size: 11px; color: var(--text-3); margin-top: -2px; }
+  .header-tag {
+    font-size: 11px; background: var(--accent-bg);
+    color: var(--accent); padding: 3px 10px;
+    border-radius: 20px; font-weight: 500;
+  }
+
+  /* ── LAYOUT ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .upload-title {
+    font-size: 16px; font-weight: 600; margin-bottom: 4px;
+  }
+  .upload-desc {
+    font-size: 13px; color: var(--text-2); margin-bottom: 1.25rem;
+  }
+  .upload-area {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.drag { border-color: var(--accent); background: var(--accent-bg); }
+  .upload-area input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 28px; margin-bottom: 8px; color: var(--text-3); }
+  .upload-label { font-size: 14px; font-weight: 500; color: var(--text); }
+  .upload-hint { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+  .btn-calcular {
+    margin-top: 1.25rem;
+    background: var(--text); color: white;
+    border: none; border-radius: var(--radius);
+    padding: 10px 24px; font-size: 14px; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: opacity 0.15s;
+  }
+  .btn-calcular:hover { opacity: 0.85; }
+  .btn-calcular:disabled { opacity: 0.4; cursor: not-allowed; }
+  .file-selected {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--green-bg); border: 1px solid var(--green-border);
+    border-radius: var(--radius); padding: 8px 12px; margin-top: 10px;
+    font-size: 13px; color: var(--green);
+  }
+
+  /* ── LOADING ── */
+  .loading {
+    display: none; align-items: center; gap: 10px;
+    background: var(--accent-bg); border: 1px solid #bfdbfe;
+    border-radius: var(--radius); padding: 12px 16px;
+    font-size: 13px; color: var(--accent); margin-top: 1rem;
+  }
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid #bfdbfe;
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERROR ── */
+  .error-box {
+    display: none; background: var(--red-bg); border: 1px solid var(--red-border);
+    border-radius: var(--radius); padding: 12px 16px;
+    font-size: 13px; color: var(--red); margin-top: 1rem;
+  }
+
+  /* ── RESULTADOS ── */
+  #resultados { display: none; }
+
+  /* ── RESUMEN CARDS ── */
+  .resumen-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin-bottom: 1.5rem;
+  }
+  .res-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 1rem 1.25rem;
+  }
+  .res-card-label { font-size: 11px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .res-card-val { font-size: 24px; font-weight: 600; }
+  .res-card-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .val-ok { color: var(--green); }
+  .val-warn { color: var(--red); }
+  .val-neutral { color: var(--text); }
+
+  /* ── SECCIÓN ── */
+  .seccion {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); margin-bottom: 1.5rem; overflow: hidden;
+  }
+  .seccion-header {
+    padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  }
+  .seccion-titulo { font-size: 14px; font-weight: 600; }
+  .seccion-desc { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .seccion-norma {
+    font-size: 11px; color: var(--accent); background: var(--accent-bg);
+    padding: 3px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; align-self: flex-start;
+  }
+
+  /* ── TABLA ── */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 8px 14px;
+    color: var(--text-3); font-weight: 500; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--border); background: var(--bg);
+    white-space: nowrap;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+
+  /* badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge-ok { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-alerta { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .badge-warn { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+
+  /* tooltip simple */
+  .tip { position: relative; cursor: help; border-bottom: 1px dashed var(--text-3); }
+  .tip::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    background: #1a1a18; color: white; font-size: 11px; line-height: 1.5;
+    padding: 6px 10px; border-radius: 6px; white-space: nowrap;
+    pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 20;
+    max-width: 260px; white-space: normal; text-align: center;
+  }
+  .tip:hover::after { opacity: 1; }
+
+  /* piso label */
+  .piso-label { font-weight: 500; font-size: 13px; }
+  .piso-elev { font-size: 11px; color: var(--text-3); }
+
+  /* número con barra de progreso */
+  .num-col { min-width: 90px; }
+  .num-val { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .num-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 4px; width: 80px; }
+  .num-bar { height: 3px; border-radius: 2px; }
+
+  /* alerta explicativa */
+  .alerta-box {
+    margin: 1rem 1.25rem; padding: 12px 14px;
+    border-radius: var(--radius); font-size: 13px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .alerta-box.rojo { background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red); }
+  .alerta-box.verde { background: var(--green-bg); border: 1px solid var(--green-border); color: var(--green); }
+  .alerta-box.amarillo { background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber); }
+  .alerta-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alerta-titulo { font-weight: 600; margin-bottom: 2px; }
+  .alerta-texto { font-size: 12px; line-height: 1.5; }
+
+  /* tabla torsión — columna diferencia visual */
+  .delta-pair { display: flex; flex-direction: column; gap: 2px; }
+  .delta-d1 { font-weight: 600; font-size: 13px; }
+  .delta-d2 { font-size: 11px; color: var(--text-3); }
+
+  .footer { text-align: center; padding: 2rem; font-size: 12px; color: var(--text-3); }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">S</div>
+    <div>
+      <div class="logo-name">StructurApp</div>
+      <div class="logo-sub">Verificación estructural NSR-10</div>
+    </div>
+  </div>
+  <div class="header-tag">Módulo 1 — Derivas y Torsión</div>
+</header>
+
+<main class="main">
+
+  <!-- UPLOAD -->
+  <div class="upload-card">
+    <div class="upload-title">Cargar tabla Joint Drifts de ETABS</div>
+    <div class="upload-desc">
+      En ETABS: <strong>Display → Show Tables → Analysis Results → Joint Output → Joint Drifts</strong> → exportar como Excel (.xlsx)
+    </div>
+
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="archivoInput" accept=".xlsx" />
+      <div class="upload-icon">📂</div>
+      <div class="upload-label">Arrastra el archivo aquí o haz clic para seleccionar</div>
+      <div class="upload-hint">Formato: .xlsx exportado de ETABS</div>
+    </div>
+
+    <div class="file-selected" id="fileSelected" style="display:none">
+      ✅ <span id="fileName"></span>
+    </div>
+
+    <button class="btn-calcular" id="btnCalcular" disabled onclick="calcular()">
+      ⚡ Calcular derivas y verificar NSR-10
+    </button>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      Calculando derivas de entrepiso y verificando irregularidades…
+    </div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div id="resultados">
+
+    <!-- RESUMEN EJECUTIVO -->
+    <div class="resumen-grid" id="resumenGrid"></div>
+
+    <!-- TABLA DERIVAS -->
+    <div class="seccion" id="seccionDerivas"></div>
+
+    <!-- TABLA TORSIÓN -->
+    <div class="seccion" id="seccionTorsion"></div>
+
+  </div>
+
+</main>
+
+<div class="footer">StructurApp v0.1 · NSR-10 Cap. A · Proyecto Campo Hermoso</div>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+let archivoSeleccionado = null;
+
+// Drag & drop
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) setArchivo(f);
+});
+
+document.getElementById('archivoInput').addEventListener('change', e => {
+  if (e.target.files[0]) setArchivo(e.target.files[0]);
+});
+
+function setArchivo(f) {
+  archivoSeleccionado = f;
+  document.getElementById('fileName').textContent = f.name;
+  document.getElementById('fileSelected').style.display = 'flex';
+  document.getElementById('btnCalcular').disabled = false;
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('resultados').style.display = 'none';
+}
+
+async function calcular() {
+  const loading = document.getElementById('loading');
+  const errorBox = document.getElementById('errorBox');
+  const btn = document.getElementById('btnCalcular');
+
+  loading.style.display = 'flex';
+  errorBox.style.display = 'none';
+  btn.disabled = true;
+
+  const fd = new FormData();
+  fd.append('archivo', archivoSeleccionado);
+
+  try {
+    const res = await fetch(`${API}/api/v1/derivas/calcular`, { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Error en el servidor');
+    }
+    const data = await res.json();
+    renderResultados(data);
+  } catch (e) {
+    errorBox.textContent = '⚠ ' + e.message;
+    errorBox.style.display = 'block';
+  } finally {
+    loading.style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+function pct(val) { return (val * 100).toFixed(3) + '%'; }
+function cm(val) { return val.toFixed(4) + ' cm'; }
+function fmt(val, dec=4) { return Number(val).toFixed(dec); }
+
+function renderResultados(data) {
+  const { resumen, derivas, torsion } = data;
+  document.getElementById('resultados').style.display = 'block';
+
+  // ── RESUMEN ──
+  const clasificOk = resumen.clasificacion === 'Regular';
+  document.getElementById('resumenGrid').innerHTML = `
+    <div class="res-card">
+      <div class="res-card-label">Clasificación sísmica</div>
+      <div class="res-card-val ${clasificOk ? 'val-ok' : 'val-warn'}">${resumen.clasificacion}</div>
+      <div class="res-card-sub">Según NSR-10 A.3.3</div>
+    </div>
+    <div class="res-card">
+      <div class="res-card-label">Factor Φp (torsión)</div>
+      <div class="res-card-val ${resumen.phi_p_global < 1 ? 'val-warn' : 'val-ok'}">${resumen.phi_p_global}</div>
+      <div class="res-card-sub">Penalización al coeficiente R</div>
+    </div>
+    <div class="res-card">
+      <div class="res-card-label">Irregularidad 1aP</div>
+      <div class="res-card-val ${resumen.tiene_1aP ? 'val-warn' : 'val-ok'}">${resumen.tiene_1aP ? 'Presente' : 'No aplica'}</div>
+      <div class="res-card-sub">Torsional en planta</div>
+    </div>
+    <div class="res-card">
+      <div class="res-card-label">Límite de deriva</div>
+      <div class="res-card-val val-neutral">${resumen.limite_deriva_cm} cm</div>
+      <div class="res-card-sub">1% × H piso (NSR-10 A.6.3.2)</div>
+    </div>
+    <div class="res-card">
+      <div class="res-card-label">Pisos analizados</div>
+      <div class="res-card-val val-neutral">${resumen.pisos_analizados}</div>
+      <div class="res-card-sub">Nodos extremos: ${resumen.nodos_analizados}</div>
+    </div>
+  `;
+
+  // ── TABLA DERIVAS ──
+  // Agrupar por piso y tomar el máximo combinado
+  const pisoMap = {};
+  derivas.forEach(r => {
+    if (!pisoMap[r.piso]) pisoMap[r.piso] = [];
+    pisoMap[r.piso].push(r);
+  });
+
+  const pisos = Object.keys(pisoMap).sort((a, b) => {
+    const na = parseFloat(a.replace('Nv+','').replace('m',''));
+    const nb = parseFloat(b.replace('Nv+','').replace('m',''));
+    return nb - na;
+  });
+
+  let filasDerivas = '';
+  pisos.forEach(piso => {
+    const registros = pisoMap[piso];
+    const maxX = Math.max(...registros.filter(r=>r.caso_carga.includes('X')).map(r=>r.deriva_x_cm));
+    const maxY = Math.max(...registros.filter(r=>r.caso_carga.includes('Y')).map(r=>r.deriva_y_cm));
+    const maxComb = Math.max(...registros.map(r=>r.deriva_combinada_cm));
+    const limite = registros[0].limite_cm;
+    const pctComb = (maxComb / limite * 100).toFixed(1);
+    const cumple = maxComb <= limite;
+    const barW = Math.min(100, (maxComb / limite * 100)).toFixed(0);
+    const barColor = cumple ? '#1a7a4a' : '#c0392b';
+
+    filasDerivas += `
+      <tr>
+        <td>
+          <div class="piso-label">${piso}</div>
+          <div class="piso-elev">H piso = 288 cm</div>
+        </td>
+        <td class="num-col">
+          <div class="num-val">${fmt(maxX)} cm</div>
+          <div style="font-size:11px;color:var(--text-3)">${(maxX/288*100).toFixed(3)}% de H</div>
+        </td>
+        <td class="num-col">
+          <div class="num-val">${fmt(maxY)} cm</div>
+          <div style="font-size:11px;color:var(--text-3)">${(maxY/288*100).toFixed(3)}% de H</div>
+        </td>
+        <td class="num-col">
+          <div class="num-val" style="color:${barColor};font-weight:600">${fmt(maxComb)} cm</div>
+          <div class="num-bar-wrap"><div class="num-bar" style="width:${barW}%;background:${barColor}"></div></div>
+        </td>
+        <td><span style="color:var(--text-2)">${fmt(limite)} cm</span></td>
+        <td>${pctComb}% del límite</td>
+        <td>
+          <span class="badge ${cumple ? 'badge-ok' : 'badge-alerta'}">
+            ${cumple ? '✓ Cumple' : '✗ Excede'}
+          </span>
+        </td>
+      </tr>
+    `;
+  });
+
+  const todasCumplen = derivas.every(r => r.cumple_combinado);
+  const alertaDerivas = todasCumplen
+    ? `<div class="alerta-box verde"><div class="alerta-icon">✓</div><div><div class="alerta-titulo">Derivas dentro del límite permisible</div><div class="alerta-texto">Todos los pisos cumplen la deriva máxima de ${resumen.limite_deriva_cm} cm (1% de la altura de entrepiso) según NSR-10 A.6.3.2. Para estructuras con irregularidad torsional 1aP, la deriva se evalúa como √(Δx² + Δy²) en cualquier punto del piso.</div></div></div>`
+    : `<div class="alerta-box rojo"><div class="alerta-icon">⚠</div><div><div class="alerta-titulo">Uno o más pisos exceden la deriva permisible</div><div class="alerta-texto">La deriva de entrepiso supera el 1% de la altura (${resumen.limite_deriva_cm} cm). Se requiere revisar la rigidez lateral del sistema estructural o aumentar las secciones de los elementos.</div></div></div>`;
+
+  document.getElementById('seccionDerivas').innerHTML = `
+    <div class="seccion-header">
+      <div>
+        <div class="seccion-titulo">Derivas de entrepiso — Anexo J</div>
+        <div class="seccion-desc">Desplazamiento relativo entre pisos consecutivos bajo sismo de diseño. Para estructura con irregularidad 1aP se usa la combinación vectorial √(Δx² + Δy²).</div>
+      </div>
+      <div class="seccion-norma">NSR-10 A.6.3.1</div>
+    </div>
+    ${alertaDerivas}
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>
+              <span class="tip" data-tip="Nivel del piso analizado, medido desde el nivel ±0.00">Entrepiso</span>
+            </th>
+            <th>
+              <span class="tip" data-tip="Deriva en la dirección X: desplazamiento horizontal del piso respecto al piso inferior, en la dirección longitudinal">Deriva X (cm)</span>
+            </th>
+            <th>
+              <span class="tip" data-tip="Deriva en la dirección Y: desplazamiento horizontal del piso respecto al piso inferior, en la dirección transversal">Deriva Y (cm)</span>
+            </th>
+            <th>
+              <span class="tip" data-tip="Deriva combinada = √(ΔX² + ΔY²). Se usa cuando hay irregularidad torsional 1aP, para evaluar el punto más desfavorable del piso">Deriva combinada √(Δx²+Δy²)</span>
+            </th>
+            <th>
+              <span class="tip" data-tip="Valor máximo permitido por NSR-10: 1% de la altura de entrepiso = 0.01 × 288 cm = 2.88 cm">Límite NSR-10</span>
+            </th>
+            <th>% del límite</th>
+            <th>Verificación</th>
+          </tr>
+        </thead>
+        <tbody>${filasDerivas}</tbody>
+      </table>
+    </div>
+  `;
+
+  // ── TABLA TORSIÓN ──
+  const pisosOrden = [...new Set(torsion.map(r=>r.piso))].sort((a,b)=>{
+    return parseFloat(b.replace('Nv+','')) - parseFloat(a.replace('Nv+',''));
+  });
+
+  let filasTorsion = '';
+  torsion.forEach(r => {
+    const esIrreg = r.irregularidad_1aP || r.irregularidad_1bP;
+    const tipo = r.irregularidad_1bP ? '1bP — Extrema' : r.irregularidad_1aP ? '1aP — Torsional' : 'Regular';
+    const badgeClass = r.irregularidad_1bP ? 'badge-alerta' : r.irregularidad_1aP ? 'badge-warn' : 'badge-ok';
+    const pctUsado = (r.delta_max_cm / r.limite_1aP_cm * 100).toFixed(1);
+
+    filasTorsion += `
+      <tr>
+        <td><div class="piso-label">${r.piso}</div></td>
+        <td style="font-weight:500">Sismo ${r.direccion_sismo}</td>
+        <td style="font-size:12px;color:var(--text-2)">Nodos ${r.par_nodos}</td>
+        <td>
+          <div class="delta-pair">
+            <div class="delta-d1">${fmt(r.delta_max_cm)} cm <span style="font-size:10px;color:var(--text-3)">(máx)</span></div>
+            <div class="delta-d2">${fmt(r.delta_min_cm)} cm (opuesto)</div>
+          </div>
+        </td>
+        <td>${fmt(r.promedio_cm)} cm</td>
+        <td>
+          <div>${fmt(r.limite_1aP_cm)} cm</div>
+          <div style="font-size:11px;color:var(--text-3)">= 1.2 × promedio</div>
+        </td>
+        <td>
+          <div>${fmt(r.limite_1bP_cm)} cm</div>
+          <div style="font-size:11px;color:var(--text-3)">= 1.4 × promedio</div>
+        </td>
+        <td><span class="badge ${badgeClass}">${tipo}</span></td>
+        <td style="font-weight:600;color:${r.phi_p < 1 ? 'var(--red)' : 'var(--green)'}">${r.phi_p}</td>
+      </tr>
+    `;
+  });
+
+  const tieneIrreg = resumen.tiene_1aP || resumen.tiene_1bP;
+  const alertaTorsion = tieneIrreg
+    ? `<div class="alerta-box amarillo"><div class="alerta-icon">⚠</div><div>
+        <div class="alerta-titulo">Irregularidad torsional detectada — Tipo 1aP</div>
+        <div class="alerta-texto">
+          La deriva del nodo extremo supera 1.2 veces la deriva promedio del diafragma en algunos pisos (dirección Y). 
+          Esto activa la irregularidad torsional Tipo 1aP según NSR-10 A.3.3.4.1.<br><br>
+          <strong>Consecuencias:</strong> (1) El coeficiente R se reduce: Φp = 0.90 → R = 0.90 × 7.0 = 6.30.
+          (2) Las derivas deben evaluarse como √(Δx²+Δy²). (3) Verificar si se requiere amplificar la excentricidad accidental (NSR-10 A.3.6.7.1).
+        </div>
+       </div></div>`
+    : `<div class="alerta-box verde"><div class="alerta-icon">✓</div><div>
+        <div class="alerta-titulo">Sin irregularidad torsional</div>
+        <div class="alerta-texto">Ningún piso supera el límite de 1.2 veces la deriva promedio. La estructura se clasifica como regular en torsión. Φp = 1.00.</div>
+       </div></div>`;
+
+  document.getElementById('seccionTorsion').innerHTML = `
+    <div class="seccion-header">
+      <div>
+        <div class="seccion-titulo">Irregularidad torsional en planta — Anexo F</div>
+        <div class="seccion-desc">
+          Se compara la deriva del nodo extremo (Δmáx) contra la deriva promedio del diafragma (Δprom).
+          <br>Si Δmáx &gt; 1.2·Δprom → Tipo 1aP (Φp = 0.90) · Si Δmáx &gt; 1.4·Δprom → Tipo 1bP (Φp = 0.80)
+        </div>
+      </div>
+      <div class="seccion-norma">NSR-10 A.3.3.4.1</div>
+    </div>
+    ${alertaTorsion}
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Entrepiso</th>
+            <th>Dirección sismo</th>
+            <th>
+              <span class="tip" data-tip="Par de nodos en extremos opuestos del diafragma usado para calcular la excentricidad torsional">Par de nodos</span>
+            </th>
+            <th>
+              <span class="tip" data-tip="Δmáx: deriva del nodo más desplazado. Δopuesto: deriva del nodo en el extremo contrario del mismo eje">Δmáx / Δopuesto</span>
+            </th>
+            <th>
+              <span class="tip" data-tip="Promedio entre los dos nodos extremos del diafragma: (Δmáx + Δopuesto) / 2">Δpromedio</span>
+            </th>
+            <th>
+              <span class="tip" data-tip="Límite Tipo 1aP: si Δmáx supera este valor, hay irregularidad torsional. = 1.2 × Δpromedio">Límite 1aP</span>
+            </th>
+            <th>
+              <span class="tip" data-tip="Límite Tipo 1bP: irregularidad torsional extrema. = 1.4 × Δpromedio">Límite 1bP</span>
+            </th>
+            <th>Tipo irregularidad</th>
+            <th>
+              <span class="tip" data-tip="Factor de penalización al coeficiente R por irregularidad torsional. Φp = 0.90 para 1aP, Φp = 0.80 para 1bP">Φp</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>${filasTorsion}</tbody>
+      </table>
+    </div>
+  `;
+
+  document.getElementById('resultados').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
